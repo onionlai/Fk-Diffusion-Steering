@@ -686,9 +686,9 @@ class FKDStableDiffusionXL(
             imagesx = self.image_processor.postprocess(x, output_type=output_type)
             imagesx = [image for image in imagesx]
             rewards = get_reward_function(
-                fkd_args["guidance_reward_fn"], 
-                images=imagesx, 
-                prompts=prompt, 
+                fkd_args["guidance_reward_fn"],
+                images=imagesx,
+                prompts=prompt,
                 metric_to_chase=fkd_args.get("metric_to_chase", None)
             )
 
@@ -886,7 +886,7 @@ class FKDStableDiffusionXL(
         return StableDiffusionXLPipelineOutput(images=image)
 
 
-                
+
 # FK Steering Change
 def latent_to_decode(*, model, output_type, latents):
     if not output_type == "latent":

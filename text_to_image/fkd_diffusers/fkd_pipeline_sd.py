@@ -253,7 +253,7 @@ class FKDStableDiffusion(
         Args:
             prompt (`str` or `List[str]`, *optional*):
                 The prompt or prompts to guide image generation. If not defined, you need to pass `prompt_embeds`.
-            
+
             FK Steering Addition:
             fkd_args (`dict`, *optional*):
                 The arguments to be passed to the FKD class. If not defined, FKD will not be used.
@@ -470,9 +470,9 @@ class FKDStableDiffusion(
             imagesx = self.image_processor.postprocess(x, output_type=output_type)
             imagesx = [image for image in imagesx]
             rewards = get_reward_function(
-                fkd_args["guidance_reward_fn"], 
-                images=imagesx, 
-                prompts=prompt, 
+                fkd_args["guidance_reward_fn"],
+                images=imagesx,
+                prompts=prompt,
                 metric_to_chase=fkd_args.get("metric_to_chase", None)
             )
 

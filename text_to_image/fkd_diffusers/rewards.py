@@ -7,11 +7,26 @@ import hpsv2
 from image_reward_utils import rm_load
 from llm_grading import LLMGrader
 
+# Import pose validity reward
+try:
+    import sys
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    fk_dir = os.path.dirname(os.path.dirname(current_dir))
+    swimming_pose_reward_dir = os.path.join(fk_dir, "swimming_pose_reward")
+    if swimming_pose_reward_dir not in sys.path:
+        sys.path.insert(0, swimming_pose_reward_dir)
+    from pose_reward import do_pose_reward
+except ImportError as e:
+    print(f"Warning: Could not import pose_reward: {e}, PoseValidity reward will not be available.")
+    do_pose_reward = None
+
 # Stores the reward models
 REWARDS_DICT = {
     "Clip-Score": None,
     "ImageReward": None,
     "LLMGrader": None,
+    "PoseValidity": None,
 }
 
 
@@ -21,19 +36,40 @@ def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_s
         print("`metric_to_chase` will be ignored as it only applies to 'LLMGrader' as the `reward_name`")
     if reward_name == "ImageReward":
         return do_image_reward(images=images, prompts=prompts)
-    
+
     elif reward_name == "Clip-Score":
         return do_clip_score(images=images, prompts=prompts)
-    
+
     elif reward_name == "HumanPreference":
         return do_human_preference_score(images=images, prompts=prompts)
 
     elif reward_name == "LLMGrader":
         return do_llm_grading(images=images, prompts=prompts, metric_to_chase=metric_to_chase)
-    
+
+    elif reward_name == "PoseValidity":
+        return do_pose_reward(images=images) + 3.0
+
+    elif reward_name == "PoseValidity-Clip":
+        clip_scores = do_clip_score(images=images, prompts=prompts)
+        pose_scores = do_pose_reward(images=images)
+
+        # Normalize clip scores (typically in [-1, 1] range, normalize to [0, 1])
+        clip_normalized = [(s + 1) / 2 for s in clip_scores]
+
+        # Normalize pose scores (typically negative, normalize to [0, 1])
+        pose_min = min(pose_scores) if pose_scores else 0
+        pose_max = max(pose_scores) if pose_scores else 0
+        if pose_max > pose_min:
+            pose_normalized = [(s - pose_min) / (pose_max - pose_min) for s in pose_scores]
+        else:
+            pose_normalized = [0.5] * len(pose_scores)  # All same value, use middle
+
+        # 50% CLIP + 50% Pose
+        mixed = [0.5 * c + 0.5 * p for c, p in zip(clip_normalized, pose_normalized)]
+        return mixed
     else:
         raise ValueError(f"Unknown metric: {reward_name}")
-    
+
 # Compute human preference score
 def do_human_preference_score(*, images, prompts, use_paths=False):
     if use_paths:
@@ -105,7 +141,7 @@ def do_clip_score(*, images, prompts):
 # Compute LLM-grading
 def do_llm_grading(*, images, prompts, metric_to_chase="overall_score"):
     global REWARDS_DICT
-    
+
     if REWARDS_DICT["LLMGrader"] is None:
         REWARDS_DICT["LLMGrader"]  = LLMGrader()
     llm_grading_result = [
