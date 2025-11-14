@@ -47,35 +47,22 @@ class PoseValidityReward:
     ):
         """
         Initialize the pose validity reward function.
-
-        Args:
-            vae_model_path: Path to the trained VAE model file (relative to this file's directory)
-                           If None, uses default "pose_vae_side_swimming.pt" in the same directory
-            device: Device to use ('cpu', 'cuda', 'mps', or None for auto)
-            min_confidence: Minimum confidence threshold for keypoint detection
         """
-        # Device setup
         if device is None:
             if torch.cuda.is_available():
                 device = "cuda"
-            # elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-              #   device = "mps"
             else:
                 device = "cpu"
         self.device = device
         self.min_confidence = min_confidence
 
-        # Set default model path relative to this file's directory
         if vae_model_path is None:
-            # Get directory where this file is located
             current_dir = os.path.dirname(os.path.abspath(__file__))
             vae_model_path = os.path.join(current_dir, "pose_vae_side_swimming.pt")
         elif not os.path.isabs(vae_model_path):
-            # If relative path, make it relative to this file's directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
             vae_model_path = os.path.join(current_dir, vae_model_path)
 
-        # Load ViTPose
         print("Loading ViTPose...")
         self.vitpose_processor = AutoImageProcessor.from_pretrained("usyd-community/vitpose-base-simple")
         self.vitpose_model = VitPoseForPoseEstimation.from_pretrained("usyd-community/vitpose-base-simple")
@@ -83,7 +70,6 @@ class PoseValidityReward:
         self.vitpose_model.eval()
         print("ViTPose loaded")
 
-        # Load VAE model
         print(f"Loading VAE model from {vae_model_path}...")
         if not os.path.exists(vae_model_path):
             raise FileNotFoundError(f"VAE model not found: {vae_model_path}")
@@ -96,7 +82,6 @@ class PoseValidityReward:
             self.vae = VAE(din=input_dim, dz=latent_dim).to(self.device)
             self.vae.load_state_dict(checkpoint['model_state_dict'])
 
-            # Load standardization parameters
             if 'X_mean' in checkpoint and 'X_std' in checkpoint:
                 self.X_mean = checkpoint['X_mean']
                 self.X_std = checkpoint['X_std']
@@ -117,42 +102,23 @@ class PoseValidityReward:
         image: Union[Image.Image, str],
         min_confidence: Optional[float] = None
     ) -> Tuple[Optional[Dict[str, np.ndarray]], Optional[Dict[str, float]], bool]:
-        """
-        Extract keypoints from image using ViTPose.
-
-        Args:
-            image: PIL Image or path to image file
-            min_confidence: Minimum confidence threshold (overrides instance default)
-
-        Returns:
-            keypoints_dict: Dict of {name: (x, y)} for selected keypoints
-            scores_dict: Dict of {name: score} for confidence scores
-            success: bool indicating if extraction was successful
-        """
         if min_confidence is None:
             min_confidence = self.min_confidence
 
         try:
-            # Load image if path provided
             if isinstance(image, str):
                 image = Image.open(image).convert('RGB')
             elif not isinstance(image, Image.Image):
                 raise ValueError(f"Invalid image type: {type(image)}")
 
             width, height = image.size
-
-            # ViTPose requires boxes parameter - use full image box
             boxes = [[[0.0, 0.0, float(width), float(height)]]]
-
-            # Preprocess
             inputs = self.vitpose_processor(image, boxes=boxes, return_tensors="pt")
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            # Run ViTPose
             with torch.no_grad():
                 outputs = self.vitpose_model(**inputs)
 
-            # Post-process
             pose_results = self.vitpose_processor.post_process_pose_estimation(
                 outputs, boxes=boxes
             )[0]
@@ -161,12 +127,12 @@ class PoseValidityReward:
                 return None, None, False
 
             person = pose_results[0]
-            keypoints = person["keypoints"].cpu().numpy()  # Shape: (17, 2)
-            scores = person["scores"].cpu().numpy()  # Shape: (17,)
+            keypoints = person["keypoints"].cpu().numpy()
+            scores = person["scores"].cpu().numpy()
 
-            # Extract selected keypoints
             keypoints_dict = {}
             scores_dict = {}
+            critical_keys = ['l_hip', 'r_hip', 'l_shoulder', 'r_shoulder']
 
             for name, idx in SELECTED_KEYPOINTS.items():
                 if idx < len(keypoints):
@@ -177,11 +143,8 @@ class PoseValidityReward:
                         keypoints_dict[name] = np.array([x, y], dtype=np.float32)
                         scores_dict[name] = float(score)
 
-            # Check if we have enough keypoints
-            critical_keys = ['l_hip', 'r_hip', 'l_shoulder', 'r_shoulder']
             has_critical = all(k in keypoints_dict for k in critical_keys)
-
-            if len(keypoints_dict) >= 4 and has_critical:
+            if len(keypoints_dict) >= 6 and has_critical:
                 return keypoints_dict, scores_dict, True
             else:
                 return None, None, False
@@ -205,17 +168,13 @@ class PoseValidityReward:
             success: bool indicating if normalization was successful
         """
         try:
-            # Fill missing non-critical keypoints with average of available points
             if len(keypoints_dict) < len(SELECTED_KEYPOINTS):
                 avg_pos = np.mean([v for v in keypoints_dict.values()], axis=0)
                 for name in SELECTED_KEYPOINTS.keys():
                     if name not in keypoints_dict:
                         keypoints_dict[name] = avg_pos.copy()
 
-            # Normalize (translate to hip center, scale by torso length)
             normalized = normalize_points(keypoints_dict)
-
-            # Convert to vector
             vector = to_vector(normalized)
 
             return vector, True
@@ -254,9 +213,9 @@ class PoseValidityReward:
         if not success:
             return None, None, False, keypoints_dict
 
-        # Step 3: Apply standardization (same as training)
+        # Step 3: Apply standardization
         vector_std = (vector - self.X_mean.squeeze()) / self.X_std.squeeze()
-        vector_std = np.clip(vector_std, -3.0, 3.0)
+        # vector_std = np.clip(vector_std, -3.0, 3.0)
 
         # Step 4: Compute VAE reconstruction loss
         with torch.no_grad():
@@ -294,7 +253,6 @@ class PoseValidityReward:
             if success:
                 rewards.append(reward)
             else:
-                # If keypoint extraction fails, return a low reward
                 rewards.append(-10.0)  # Very low reward for invalid poses
 
         return rewards

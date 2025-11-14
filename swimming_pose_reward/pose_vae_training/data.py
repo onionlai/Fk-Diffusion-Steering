@@ -89,7 +89,7 @@ def load_2d_pelvis_txt(filepath, debug=False):
         return None, None
 
     n_frames = len(data_lines)
-    expected_keypoints = len(keypoint_names) // 3  # Should be 25 for COCO25
+    # expected_keypoints = len(keypoint_names) // 3  # Should be 25 for COCO25
 
     line_lengths = [len(line) for line in data_lines]
     if len(set(line_lengths)) > 1:
@@ -124,55 +124,11 @@ def load_2d_pelvis_txt(filepath, debug=False):
     return keypoints, 'COCO25'
 
 
-def coco25_to_coco17(keypoints_coco25):
-    """
-    Convert COCO25 keypoints to COCO17 format.
-    Supports files with 18 keypoints (missing last 7 from COCO25).
-    """
-    n_keypoints = keypoints_coco25.shape[1]
-
-    # Some files have 18 keypoints instead of 25 (missing LEar and toe/heel keypoints)
-    if n_keypoints < 17:
-        raise ValueError(f"Need at least 17 keypoints for COCO17, got {n_keypoints}")
-
-    # Mapping: COCO17 index -> COCO25 index
-    coco25_indices = [
-        0,   # 0: Nose -> Nose
-        16,  # 1: LEye -> LEye
-        15,  # 2: REye -> REye
-        18,  # 3: LEar -> LEar
-        17,  # 4: REar -> REar
-        5,   # 5: LShoulder -> LShoulder
-        2,   # 6: RShoulder -> RShoulder
-        6,   # 7: LElbow -> LElbow
-        3,   # 8: RElbow -> RElbow
-        7,   # 9: LWrist -> LWrist
-        4,   # 10: RWrist -> RWrist
-        12,  # 11: LHip -> LHip
-        9,   # 12: RHip -> RHip
-        13,  # 13: LKnee -> LKnee
-        10,  # 14: RKnee -> RKnee
-        14,  # 15: LAnkle -> LAnkle
-        11,  # 16: RAnkle -> RAnkle
-    ]
-
-    # Handle missing keypoints (e.g., LEar at index 18 in 18-keypoint files)
-    # For missing keypoints, use NaN (will be filtered later)
-    keypoints_coco17 = np.full((keypoints_coco25.shape[0], 17, keypoints_coco25.shape[2]), np.nan, dtype=keypoints_coco25.dtype)
-
-    for coco17_idx, coco25_idx in enumerate(coco25_indices):
-        if coco25_idx < n_keypoints:
-            keypoints_coco17[:, coco17_idx, :] = keypoints_coco25[:, coco25_idx, :]
-        # else: leave as NaN (for missing LEar in 18-keypoint files)
-
-    return keypoints_coco17
-
-
 def extract_keypoints_from_txt(filepath, debug=False):
     """
     Extract and normalize keypoints from 2D_pelvis.txt file.
 
-    Directly extracts 12 keypoints from COCO25 format (no COCO17 conversion needed).
+    Directly extracts 12 keypoints from COCO25 format.
 
     Assumes complete data (all 12 keypoints present) since this is synthetic data.
 
@@ -190,7 +146,7 @@ def extract_keypoints_from_txt(filepath, debug=False):
             print(f"DEBUG extract_keypoints_from_txt: {filepath} - load_2d_pelvis_txt returned None")
         return None, None
 
-    # Extract selected keypoints directly from COCO25 (no COCO17 conversion needed)
+    # Extract selected keypoints directly from COCO25
     vectors = []
     weights = []
     frames_processed = 0
@@ -334,7 +290,7 @@ def load_all_keypoints(data_dir, subdirs_filter=None):
     print(f"  After standardization: X=[{X.min():.3f}, {X.max():.3f}], mean={X.mean():.3f}, std={X.std():.3f}")
 
     if len(all_vectors) == 0:
-        print("\n⚠️  WARNING: No data loaded!")
+        print("\nWARNING: No data loaded!")
         print("  Possible issues: filtering too strict, data format mismatch, or invalid keypoints")
 
     return X, W
