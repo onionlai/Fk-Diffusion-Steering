@@ -6,6 +6,7 @@ from diffusers import DDIMScheduler
 
 from fkd_pipeline_sdxl import FKDStableDiffusionXL
 from fkd_pipeline_sd import FKDStableDiffusion
+from pose_reward import do_pose_reward
 
 from fkd_diffusers.rewards import (
     do_clip_score,
@@ -13,6 +14,7 @@ from fkd_diffusers.rewards import (
     do_image_reward,
     do_human_preference_score,
     do_llm_grading
+
 )
 
 
@@ -102,6 +104,28 @@ def do_eval(*, prompt, images, metrics_to_compute):
             results[metric]["std"] = results_arr.std().item()
             results[metric]["max"] = results_arr.max().item()
             results[metric]["min"] = results_arr.min().item()
+        elif metric == "PoseValidity":
+            results[metric] = {}
+            results[metric]["result"] = do_pose_reward(images=images)
+
+        elif metrix == "PoseValidity-Clip":
+            results[metric] = {}
+            clip_scores = do_clip_score(images=images, prompts=prompts)
+            pose_scores = do_pose_reward(images=images)
+            # Normalize clip scores (typically in [-1, 1] range, normalize to [0, 1])
+            clip_normalized = [(s + 1) / 2 for s in clip_scores]
+
+            # Normalize pose scores (typically negative, normalize to [0, 1])
+            pose_min = min(pose_scores) if pose_scores else 0
+            pose_max = max(pose_scores) if pose_scores else 0
+            if pose_max > pose_min:
+                pose_normalized = [(s - pose_min) / (pose_max - pose_min) for s in pose_scores]
+            else:
+                pose_normalized = [0.5] * len(pose_scores)  # All same value, use middle
+
+            # 50% CLIP + 50% Pose
+            mixed = [0.5 * c + 0.5 * p for c, p in zip(clip_normalized, pose_normalized)]
+            results[metric]["result"] = mixed
 
         else:
             raise ValueError(f"Unknown metric: {metric}")

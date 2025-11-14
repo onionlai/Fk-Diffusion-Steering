@@ -47,7 +47,10 @@ def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_s
         return do_llm_grading(images=images, prompts=prompts, metric_to_chase=metric_to_chase)
 
     elif reward_name == "PoseValidity":
-        return do_pose_reward(images=images) + 3.0
+        scores = do_pose_reward(images=images)
+        for i in range(len(scores)):
+            scores[i] += 3.0
+        return scores
 
     elif reward_name == "PoseValidity-Clip":
         clip_scores = do_clip_score(images=images, prompts=prompts)
