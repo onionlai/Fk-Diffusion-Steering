@@ -108,7 +108,7 @@ def do_eval(*, prompt, images, metrics_to_compute):
             results[metric] = {}
             results[metric]["result"] = do_pose_reward(images=images)
 
-        elif metrix == "PoseValidity-Clip":
+        elif metric == "PoseValidity-Clip":
             results[metric] = {}
             clip_scores = do_clip_score(images=images, prompts=prompts)
             pose_scores = do_pose_reward(images=images)
