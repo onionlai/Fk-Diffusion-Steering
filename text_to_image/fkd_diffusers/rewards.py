@@ -27,7 +27,16 @@ REWARDS_DICT = {
     "ImageReward": None,
     "LLMGrader": None,
     "PoseValidity": None,
+    "MixPoseValidityAndHumanPreference": None,
 }
+
+def _normalize(scores):
+    if not scores:
+        return []
+    mn = min(scores); mx = max(scores)
+    if mx > mn:
+        return [(s - mn) / (mx - mn) for s in scores]
+    return [0.5] * len(scores)
 
 
 # Returns the reward function based on the guidance_reward_fn name
@@ -45,6 +54,16 @@ def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_s
 
     elif reward_name == "LLMGrader":
         return do_llm_grading(images=images, prompts=prompts, metric_to_chase=metric_to_chase)
+
+    elif reward_name == "MixPoseValidityAndHumanPreference":
+        human_preference_scores = do_human_preference_score(images=images, prompts=prompts)
+        pose_scores = do_pose_reward(images=images)
+
+        hp_norm = _normalize(human_preference_scores)
+        pose_norm = _normalize(pose_scores)
+
+        mixed = [0.5 * c + 0.5 * p for c, p in zip(hp_norm, pose_norm)]
+        return mixed
 
     elif reward_name == "PoseValidity":
         return do_pose_reward(images=images) + 3.0
