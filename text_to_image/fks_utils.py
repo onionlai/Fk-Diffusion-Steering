@@ -12,6 +12,7 @@ from fkd_diffusers.rewards import (
     do_clip_score_diversity,
     do_image_reward,
     do_human_preference_score,
+    do_mix_humanpreference_pose_reward,
     do_llm_grading
 )
 
@@ -49,6 +50,18 @@ def do_eval(*, prompt, images, metrics_to_compute):
                 results[metric]["result"],
                 results[metric]["diversity"],
             ) = do_clip_score_diversity(images=images, prompts=prompt)
+            results_arr = torch.tensor(results[metric]["result"])
+
+            results[metric]["mean"] = results_arr.mean().item()
+            results[metric]["std"] = results_arr.std().item()
+            results[metric]["max"] = results_arr.max().item()
+            results[metric]["min"] = results_arr.min().item()
+
+        elif metric == "MixPoseValidityAndHumanPreference":
+            print("Hello eval time")
+            results[metric] = {}
+            results[metric]["result"] = do_mix_humanpreference_pose_reward(images=images, prompts=prompt)
+
             results_arr = torch.tensor(results[metric]["result"])
 
             results[metric]["mean"] = results_arr.mean().item()

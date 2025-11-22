@@ -30,15 +30,6 @@ REWARDS_DICT = {
     "MixPoseValidityAndHumanPreference": None,
 }
 
-def _normalize(scores):
-    if not scores:
-        return []
-    mn = min(scores); mx = max(scores)
-    if mx > mn:
-        return [(s - mn) / (mx - mn) for s in scores]
-    return [0.5] * len(scores)
-
-
 # Returns the reward function based on the guidance_reward_fn name
 def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_score"):
     if reward_name != "LLMGrader":
@@ -56,14 +47,7 @@ def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_s
         return do_llm_grading(images=images, prompts=prompts, metric_to_chase=metric_to_chase)
 
     elif reward_name == "MixPoseValidityAndHumanPreference":
-        human_preference_scores = do_human_preference_score(images=images, prompts=prompts)
-        pose_scores = do_pose_reward(images=images)
-
-        hp_norm = _normalize(human_preference_scores)
-        pose_norm = _normalize(pose_scores)
-
-        mixed = [0.5 * c + 0.5 * p for c, p in zip(hp_norm, pose_norm)]
-        return mixed
+        return do_mix_humanpreference_pose_reward(images=images, prompts=prompts)
 
     elif reward_name == "PoseValidity":
         return do_pose_reward(images=images) + 3.0
@@ -131,6 +115,36 @@ def do_clip_score_diversity(*, images, prompts):
     diversity = diversity.sum() / (n_samples * (n_samples - 1))
 
     return arr_clip_result, diversity.item()
+
+def _normalize(scores, mn=None, mx=None):
+    if not scores:
+        return []
+    if mn is None:
+        mn = min(scores)
+    if mx is None:
+        mx = max(scores)
+    if mx > mn:
+        normalized_s = [(s - mn) / (mx - mn) for s in scores]
+        return [max(0.0, min(1.0, v)) for v in normalized_s]
+    return [0.5] * len(scores)
+
+def do_mix_humanpreference_pose_reward(*, images, prompts):
+    # pose_reward = do_pose_reward(images=images)
+    # return [s + 3.0 for s in pose_reward]
+    # return do_human_preference_score(images=images, prompts=prompts)
+    human_preference_scores = do_human_preference_score(images=images, prompts=prompts)
+    print(f"Human preference scores: {human_preference_scores}")
+    pose_scores = do_pose_reward(images=images)
+    print(f"Pose validity scores: {pose_scores}")
+
+    hp_norm = _normalize(human_preference_scores, 0.20, 0.35)
+    print(f"Normalized human preference scores: {hp_norm}")
+    # -10 is not the least possible reward but that is what is used right now in case pose estimation fails
+    pose_norm = _normalize(pose_scores, -10.0, 0.0)
+    print(f"Normalized pose validity scores: {pose_norm}")
+
+    mixed = [0.5 * c + 0.5 * p for c, p in zip(hp_norm, pose_norm)]
+    return mixed
 
 # Compute ImageReward
 def do_image_reward(*, images, prompts):
