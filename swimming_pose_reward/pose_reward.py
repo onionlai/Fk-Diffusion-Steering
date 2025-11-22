@@ -251,7 +251,7 @@ class PoseValidityReward:
         for image in images:
             reward, _, success, _ = self.compute_reward(image)
             if success:
-                rewards.append(reward)
+                rewards.append(max(reward, -10.0))
             else:
                 rewards.append(-10.0)  # Very low reward for invalid poses
 
