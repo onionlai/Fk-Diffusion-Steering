@@ -16,6 +16,8 @@ from fkd_diffusers.rewards import (
     do_llm_grading
 )
 
+from pose_reward import do_pose_reward
+
 
 def get_model(model_name):
     """
@@ -50,6 +52,18 @@ def do_eval(*, prompt, images, metrics_to_compute):
                 results[metric]["result"],
                 results[metric]["diversity"],
             ) = do_clip_score_diversity(images=images, prompts=prompt)
+            results_arr = torch.tensor(results[metric]["result"])
+
+            results[metric]["mean"] = results_arr.mean().item()
+            results[metric]["std"] = results_arr.std().item()
+            results[metric]["max"] = results_arr.max().item()
+            results[metric]["min"] = results_arr.min().item()
+
+        elif metric == "PoseValidity":
+            print("Hello eval time")
+            results[metric] = {}
+            results[metric]["result"] = do_pose_reward(images=images)
+
             results_arr = torch.tensor(results[metric]["result"])
 
             results[metric]["mean"] = results_arr.mean().item()

@@ -50,7 +50,7 @@ def get_reward_function(reward_name, images, prompts, metric_to_chase="overall_s
         return do_mix_humanpreference_pose_reward(images=images, prompts=prompts)
 
     elif reward_name == "PoseValidity":
-        return do_pose_reward(images=images) + 3.0
+        return do_pose_reward(images=images)
 
     elif reward_name == "PoseValidity-Clip":
         clip_scores = do_clip_score(images=images, prompts=prompts)
@@ -127,6 +127,10 @@ def _normalize(scores, mn=None, mx=None):
         normalized_s = [(s - mn) / (mx - mn) for s in scores]
         return [max(0.0, min(1.0, v)) for v in normalized_s]
     return [0.5] * len(scores)
+
+def do_pose_reward_in_list_form(*, images):
+    pose_reward = do_pose_reward(images=images)
+    return pose_reward
 
 def do_mix_humanpreference_pose_reward(*, images, prompts):
     # pose_reward = do_pose_reward(images=images)
