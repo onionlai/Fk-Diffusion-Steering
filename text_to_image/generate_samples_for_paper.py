@@ -4,6 +4,7 @@ from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, Stable
 import os
 from datetime import datetime
 import argparse
+from huggingface_hub import login
 
 
 MODELS = {
@@ -92,6 +93,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", required=True, type=str)
     args = parser.parse_args()
+
+    login()
 
     prompt_data = [
         {
