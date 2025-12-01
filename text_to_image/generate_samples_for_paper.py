@@ -17,10 +17,10 @@ MODELS = {
             "type": "standard",
             "size": 512
         },
-        "sd_v2_1": {
-            "id": "stabilityai/stable-diffusion-2-1",
-            "type": "standard",
-            "size": 768  # v2.1 is trained on 768x768
+        "sd_3": {
+            "id": "stabilityai/stable-diffusion-3-medium-diffusers",
+            "type": "sd3",
+            "size": 1024
         },
         "sdxl": {
             "id": "stabilityai/stable-diffusion-xl-base-1.0",
