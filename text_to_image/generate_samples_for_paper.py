@@ -55,8 +55,10 @@ def generate_images(pipeline, prompt_data, model_name):
 
     score_path = os.path.join(base_dir, "scores.jsonl")
 
-    with open(score_path, "w") as  score_f:
+    print(f"Generating images using {model_name}")
+    with open(score_path, "w") as score_f:
         for prompt_idx, item in enumerate(prompt_data):
+            print(f"{prompt_idx + 1}/{len(prompt_data)}")
             prompt_text = item["prompt"]
             torch.manual_seed(0)
             torch.cuda.manual_seed(0)
