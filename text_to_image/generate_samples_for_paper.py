@@ -94,7 +94,8 @@ if __name__ == '__main__':
     parser.add_argument("--model_name", required=True, type=str)
     args = parser.parse_args()
 
-    login()
+    api_key = os.environ["HF_TOKEN"]
+    login(token=api_key)
 
     prompt_data = [
         {
