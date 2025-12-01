@@ -1,6 +1,6 @@
 import torch
 import json
-from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline
+from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, StableDiffusion3Pipeline
 import os
 from datetime import datetime
 import argparse
@@ -36,6 +36,11 @@ def get_pipeline(model_name: str, device):
             torch_dtype=torch.float16,
             use_safetensors=True,
             variant="fp16"
+        ).to(device)
+    elif "3" in model_name.lower():
+        return StableDiffusion3Pipeline.from_pretrained(
+            model_name,
+            torch_dtype=torch.float16
         ).to(device)
     else:
         return StableDiffusionPipeline.from_pretrained(
