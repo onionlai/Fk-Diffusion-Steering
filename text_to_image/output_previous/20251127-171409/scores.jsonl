@@ -1,8 +1,0 @@
-{"prompt": "A swimmer performing the backstroke in a swimming pool, side view, realistic lighting and water reflections.", "prompt_index": 0, "time_taken": 1.086071, "image_path": "output/20251127-171409/images/0.png"}
-{"prompt": "A swimmer doing the breaststroke, viewed from a slightly elevated diagonal angle showing the side of the body, realistic lighting and water reflections.", "prompt_index": 1, "time_taken": 1.045374, "image_path": "output/20251127-171409/images/1.png"}
-{"prompt": "A swimmer performing the butterfly stroke, top-down view, realistic lighting and water reflections.", "prompt_index": 2, "time_taken": 1.039286, "image_path": "output/20251127-171409/images/2.png"}
-{"prompt": "A swimmer doing freestyle, side view from underwater, realistic lighting", "prompt_index": 3, "time_taken": 1.040033, "image_path": "output/20251127-171409/images/3.png"}
-{"prompt": "Side view of a swimmer, freestyle stroke.", "prompt_index": 4, "time_taken": 1.028934, "image_path": "output/20251127-171409/images/4.png"}
-{"prompt": "A swimmer doing the freestyle, side view, splashing water.", "prompt_index": 5, "time_taken": 1.024275, "image_path": "output/20251127-171409/images/5.png"}
-{"prompt": "Side view, swimmer, freestyle, breathing.", "prompt_index": 6, "time_taken": 1.023132, "image_path": "output/20251127-171409/images/6.png"}
-{"prompt": "Underwater side view, full body, swimmer, freestyle kick.", "prompt_index": 7, "time_taken": 1.023344, "image_path": "output/20251127-171409/images/7.png"}
